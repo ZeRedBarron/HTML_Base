@@ -1,0 +1,154 @@
+var bdy = window.document.querySelector("body");
+
+var keys = [], clicked = false, mouseX, mouseY;//Mouse and keyboard controls
+
+var inter, runGame, frameClick = 0;
+
+bdy.addEventListener("keydown", function(e) {
+	keys[e.keyCode] = true;
+});
+bdy.addEventListener("keyup", function(e) {
+	keys[e.keyCode] = false;
+});
+
+bdy.addEventListener("mousedown", function() {
+	clicked = true;
+});
+bdy.addEventListener("mouseup", function() {
+	clicked = false;
+});
+bdy.addEventListener("mousemove", function(e) {
+	mouseX = e.pageX;
+	mouseY = e.pageY;
+});
+
+var ctx = window.document.getElementById("canvas").getContext("2d");
+ctx.imageSmoothingEnabled = true;
+ctx.imageSmoothingQuality = "high";
+//All setup
+
+//Variables for the blocks and platformer stuff.
+var blockSize = 45;
+
+var player, blocks = [];
+
+var update;
+
+var levelMap;
+var level = 0;
+var levels = [];//This is where the levels will go.
+
+var speed = 7;//This is the scrolling speed
+
+var cam = {
+	x: 0,
+	y: 0,
+};//Camera stuff
+
+function collide(input1, input2) {
+	return input1.x - input2.x < input2.w &&
+		input2.x - input1.x < input1.w &&
+		input1.y - input2.y < input2.h &&
+		input2.y - input1.y < input1.h;
+}//Block collision function
+
+function lerp(num1, num2, amt) {//For smooth camera motion
+	return (num2 - num1) * amt + num1;
+}
+
+//Player Object
+function Player(x, y) {
+	this.x = x;
+	this.y = y;
+	this.prevX = x;
+	this.prevY = y;
+	this.w = 45;
+	this.h = 45;
+	this.gravity = 0;
+	this.canJump = false;
+}
+Player.prototype.draw = function() {
+	ctx.fillStyle = "rgb(255, 0, 0)"
+	ctx.fillRect(this.x, this.y, this.w, this.h);
+}
+Player.prototype.update = function() {
+	this.prevX = this.x;
+	this.prevY = this.y;
+
+	this.y += this.gravity;
+	this.gravity = 0.18;//This is the gravity strength controller.
+
+	for (var i in blocks) {
+		if (collide(this, blocks[i])) {
+			if (this.prevY < blocks[i].prevY) {
+				this.canJump = true;
+			}
+			this.gravity = 0;
+
+			this.y = (this.prevY < blocks[i].prevY) ? blocks[i].y - this.h : blocks[i].y + blockSize;
+		}
+
+		this.x += speed;
+
+		for (var i in blocks) {
+			this.x = (this.prevX < blocks[i].prevX) ? blocks[i].x - this.w : blocks[i].x + blocks[i].h;
+		}
+		if ((input[32] || input[38]) && this.canJump) {//Jumping
+			this.gravity = -7;//Jump Height control.
+		}
+		this.canJump = false;
+	};
+};
+
+function Block(x, y, type) {
+	this.x = x;
+	this.y = y;
+	this.w = blockSize;
+	this.h = blockSize;
+	this.prevX = x;
+	this.prevY = y;
+
+	this.type = type;
+}
+Block.prototype.display = function() {
+	this.prevX = this.x;
+	this.prevY = this.y;
+
+	ctx.fillStyle = "rgb(255, 255, 0)"
+	ctx.fillRect(this.x, this.y, this.w, this.h);
+}
+
+var player = new Player(100, 100);
+
+function game() {
+	//Put background here.
+
+	cam.x = lerp(cam.x, window.innerWidth / 2 - 20 / 2 - player.x, 0.1);
+	cam.y = lerp(cam.y, window.innerHeight / 2 - 20 / 2 - player.y, 0.1);
+
+	ctx.save();
+	ctx.translate(cam.x, cam.y);
+
+	for (var i in blocks) {
+		blocks[i].display();
+	}
+	player.update();
+	player.draw();
+
+
+	ctx.restore();
+}
+
+
+
+
+function runGame() {
+	ctx.fillStyle = "rgb(255, 255, 255)";
+	ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);//redraw a white background for resetting the screen
+
+	game();
+
+	frameClick++;
+}
+
+inter = window.setInterval(runGame, 1000 / 60)
